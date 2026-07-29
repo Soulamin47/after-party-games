@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type GameKey = "truth" | "mime" | "bottle" | "who" | "flash";
+type GameKey = "truth" | "mime" | "bottle" | "who" | "flash" | "dark";
 
 const games: Array<{
   id: GameKey;
@@ -11,22 +11,44 @@ const games: Array<{
   subtitle: string;
   icon: string;
   tone: string;
+  premium?: boolean;
 }> = [
   { id: "truth", number: "01", title: "VÉRITÉ\nOU GAGE", subtitle: "Dis la vérité. Ou assume.", icon: "✦", tone: "coral" },
   { id: "mime", number: "02", title: "MIME\nÇA !", subtitle: "Pas un mot. Que du talent.", icon: "☝", tone: "yellow" },
   { id: "bottle", number: "03", title: "LA\nBOUTEILLE", subtitle: "Le hasard choisit pour toi.", icon: "↗", tone: "blue" },
   { id: "who", number: "04", title: "QUI DE\nNOUS ?", subtitle: "Votez. Réglez vos comptes.", icon: "☻", tone: "lime" },
   { id: "flash", number: "05", title: "DÉFI\nÉCLAIR", subtitle: "30 secondes. Zéro excuse.", icon: "ϟ", tone: "pink" },
+  { id: "dark", number: "06", title: "AFTER\nDARK", subtitle: "Questions coquines. Réservé aux adultes.", icon: "♥", tone: "dark", premium: true },
 ];
 
-const content: Record<Exclude<GameKey, "bottle">, string[]> = {
-  truth: [
-    "Quel est ton plus gros mensonge de cette année ?",
-    "Envoie « tu me manques » à la 5e personne de tes messages.",
-    "Quelle personne ici survivrait le moins longtemps sur une île déserte ?",
-    "Imite ton rire le plus gênant pendant 15 secondes.",
-    "Qui dans le groupe embrasserais-tu si tu devais choisir ?",
-  ],
+const truthPrompts = [
+  "Quel est ton plus gros mensonge de cette année ?",
+  "Quelle personne ici survivrait le moins longtemps sur une île déserte ?",
+  "Qui dans le groupe embrasserais-tu si tu devais choisir ?",
+  "Quel message regrettes-tu le plus d’avoir envoyé ?",
+  "Quelle est ta peur la plus ridicule ?",
+];
+
+const darePrompts = [
+  "Envoie « tu me manques » à la 5e personne de tes messages.",
+  "Imite ton rire le plus gênant pendant 15 secondes.",
+  "Danse sans musique jusqu’à ce que le groupe applaudisse.",
+  "Laisse le groupe choisir ta prochaine photo de profil.",
+  "Fais une déclaration d’amour dramatique à l’objet le plus proche.",
+];
+
+const bottleChallenges = [
+  "Fais rire le groupe en moins de 20 secondes.",
+  "Imite une personne du groupe jusqu’à ce qu’on la reconnaisse.",
+  "Raconte ton dernier moment vraiment gênant.",
+  "Danse pendant 15 secondes sans aucune musique.",
+  "Laisse le groupe choisir un mot que tu dois placer dans chaque phrase jusqu’au prochain tour.",
+  "Fais un compliment sincère à chaque personne du groupe.",
+  "Parle comme dans un film dramatique jusqu’au prochain lancer.",
+  "Montre la dernière photo de ta galerie — sans tricher.",
+];
+
+const content: Record<Exclude<GameKey, "truth" | "bottle" | "dark">, string[]> = {
   mime: [
     "Un pingouin qui découvre TikTok",
     "Quelqu’un qui marche sur des Lego",
@@ -60,7 +82,11 @@ export default function Home() {
   const [started, setStarted] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(18);
+  const [bottleTarget, setBottleTarget] = useState<string | null>(null);
+  const [bottleChallenge, setBottleChallenge] = useState("");
   const [showPremium, setShowPremium] = useState(false);
+  const [premiumFocus, setPremiumFocus] = useState(false);
+  const [truthChoice, setTruthChoice] = useState<"truth" | "dare" | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("after-players");
@@ -73,9 +99,14 @@ export default function Home() {
 
   const currentPlayer = players[round % players.length] || "Joueur";
   const prompt = useMemo(() => {
-    if (!activeGame || activeGame === "bottle") return "";
+    if (!activeGame || activeGame === "bottle" || activeGame === "dark") return "";
+    if (activeGame === "truth") {
+      if (!truthChoice) return "";
+      const selected = truthChoice === "truth" ? truthPrompts : darePrompts;
+      return selected[round % selected.length];
+    }
     return content[activeGame][round % content[activeGame].length];
-  }, [activeGame, round]);
+  }, [activeGame, round, truthChoice]);
 
   function addPlayer() {
     const clean = newPlayer.trim();
@@ -85,19 +116,35 @@ export default function Home() {
   }
 
   function openGame(id: GameKey) {
+    if (id === "dark") {
+      setPremiumFocus(true);
+      setShowPremium(true);
+      return;
+    }
+    if (id === "truth") setTruthChoice(null);
+    if (id === "bottle") {
+      setBottleTarget(null);
+      setBottleChallenge("");
+    }
     setRound(Math.floor(Math.random() * 5));
     setActiveGame(id);
   }
 
   function nextPrompt() {
     setRound((value) => value + 1);
+    if (activeGame === "truth") setTruthChoice(null);
   }
 
   function spinBottle() {
     if (spinning) return;
+    setBottleTarget(null);
     setSpinning(true);
     setRotation((value) => value + 1260 + Math.floor(Math.random() * 720));
     window.setTimeout(() => {
+      const target = players[Math.floor(Math.random() * players.length)] || "Joueur";
+      const challenge = bottleChallenges[Math.floor(Math.random() * bottleChallenges.length)];
+      setBottleTarget(target);
+      setBottleChallenge(challenge);
       setSpinning(false);
       setRound((value) => value + 1);
     }, 2200);
@@ -111,8 +158,8 @@ export default function Home() {
           <span>AFTER</span><i>!</i>
         </button>
         <div className="top-actions">
-          <button className="test-pill" onClick={() => setShowPremium(true)}>
-            <span className="live-dot" /> MODE TEST · TOUT DÉBLOQUÉ
+          <button className="test-pill" onClick={() => { setPremiumFocus(false); setShowPremium(true); }}>
+            <span className="live-dot" /> MODE TEST · 5 JEUX DÉBLOQUÉS
           </button>
           <button className="avatar-stack" onClick={() => setStarted(false)} aria-label="Modifier les joueurs">
             {players.slice(0, 3).map((player, index) => (
@@ -142,12 +189,13 @@ export default function Home() {
         </div>
         <div className="game-grid">
           {games.map((game) => (
-            <button key={game.id} className={`game-card ${game.tone}`} onClick={() => openGame(game.id)}>
+            <button key={game.id} className={`game-card ${game.tone} ${game.premium ? "premium-game" : ""}`} onClick={() => openGame(game.id)}>
               <span className="game-number">{game.number}</span>
+              {game.premium && <span className="premium-badge">PREMIUM · 18+</span>}
               <span className="game-icon">{game.icon}</span>
               <strong>{game.title.split("\n").map((line) => <span key={line}>{line}<br /></span>)}</strong>
               <small>{game.subtitle}</small>
-              <i>JOUER <b>→</b></i>
+              <i>{game.premium ? "DÉBLOQUER" : "JOUER"} <b>{game.premium ? "🔒" : "→"}</b></i>
             </button>
           ))}
         </div>
@@ -159,7 +207,7 @@ export default function Home() {
           <strong>EST POUR NOUS.</strong>
         </div>
         <p>Teste les 5 jeux sans limite. Ensuite, débloque<br />AFTER! pour toutes vos prochaines soirées.</p>
-        <button onClick={() => setShowPremium(true)}>VOIR L’ACCÈS PREMIUM <span>↗</span></button>
+        <button onClick={() => { setPremiumFocus(false); setShowPremium(true); }}>VOIR L’ACCÈS PREMIUM <span>↗</span></button>
       </section>
 
       <footer>
@@ -214,14 +262,41 @@ export default function Home() {
                 <div className="bottle-zone">
                   <div className="bottle" style={{ transform: `rotate(${rotation}deg)` }}>➜</div>
                 </div>
-                <h3>{spinning ? "ÇA TOURNE..." : `${currentPlayer}, À TOI DE LANCER !`}</h3>
-                <button className="game-action" onClick={spinBottle} disabled={spinning}>
-                  {spinning ? "ATTENDS..." : "TOURNER LA BOUTEILLE"} <span>↻</span>
-                </button>
+                {bottleTarget ? (
+                  <div className="bottle-result">
+                    <small>LA BOUTEILLE A CHOISI</small>
+                    <h3>{bottleTarget.toUpperCase()} !</h3>
+                    <p>{bottleChallenge}</p>
+                    <button className="game-action" onClick={() => setBottleTarget(null)}>DÉFI FAIT · RELANCER <span>→</span></button>
+                  </div>
+                ) : (
+                  <>
+                    <h3>{spinning ? "ÇA TOURNE..." : "QUI SERA LA PROCHAINE VICTIME ?"}</h3>
+                    <button className="game-action" onClick={spinBottle} disabled={spinning}>
+                      {spinning ? "ATTENDS..." : "TOURNER LA BOUTEILLE"} <span>↻</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : activeGame === "truth" && !truthChoice ? (
+              <div className="truth-choice">
+                <p>C’EST À <strong>{currentPlayer.toUpperCase()}</strong></p>
+                <h3>ALORS,<br />TU CHOISIS QUOI ?</h3>
+                <div>
+                  <button className="truth-button" onClick={() => setTruthChoice("truth")}>
+                    <span>✦</span><strong>VÉRITÉ</strong><small>ON VEUT TOUT SAVOIR.</small>
+                  </button>
+                  <button className="dare-button" onClick={() => setTruthChoice("dare")}>
+                    <span>ϟ</span><strong>GAGE</strong><small>PROUVE QUE TU ASSUMES.</small>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="prompt-game">
-                <p>C’EST À <strong>{currentPlayer.toUpperCase()}</strong></p>
+                <p>
+                  C’EST À <strong>{currentPlayer.toUpperCase()}</strong>
+                  {activeGame === "truth" && <i className="choice-label">{truthChoice === "truth" ? "VÉRITÉ" : "GAGE"}</i>}
+                </p>
                 <div className="prompt">{prompt}</div>
                 <div className="prompt-actions">
                   <button className="skip" onClick={nextPrompt}>PASSER</button>
@@ -237,15 +312,20 @@ export default function Home() {
         <div className="overlay premium-overlay">
           <div className="premium-card">
             <button className="close" onClick={() => setShowPremium(false)} aria-label="Fermer">×</button>
-            <span className="step">APRÈS LA SOIRÉE OFFERTE</span>
-            <h2>GARDE LE<br /><em>CHAOS.</em></h2>
-            <p>Pour les tests, tout reste débloqué. Le paiement sera connecté au lancement.</p>
+            <span className="step">{premiumFocus ? "NOUVEAU · RÉSERVÉ AUX ADULTES" : "APRÈS LA SOIRÉE OFFERTE"}</span>
+            <h2>{premiumFocus ? <>PASSE EN<br /><em>MODE NUIT.</em></> : <>GARDE LE<br /><em>CHAOS.</em></>}</h2>
+            <p>
+              {premiumFocus
+                ? "After Dark mélange questions coquines, choix impossibles et défis pour les groupes qui veulent faire monter la température."
+                : "Les cinq jeux classiques restent ouverts pour les tests. After Dark est exclusivement réservé à l’accès payant."}
+            </p>
+            {premiumFocus && <div className="dark-lock"><span>♥</span><strong>AFTER DARK</strong><small>CONTENU PREMIUM · NON INCLUS DANS LE MODE TEST</small></div>}
             <div className="price-options">
               <button><small>POUR CE SOIR</small><strong>PASS SOIRÉE</strong><b>3,99 €</b></button>
               <button className="popular"><i>LE PLUS RENTABLE</i><small>POUR TOUJOURS</small><strong>AFTER! À VIE</strong><b>14,99 €</b></button>
             </div>
-            <button className="launch" onClick={() => setShowPremium(false)}>CONTINUER EN MODE TEST <span>→</span></button>
-            <small>AUCUN PAIEMENT ACTIF DANS CETTE VERSION</small>
+            <button className="launch" onClick={() => setShowPremium(false)}>CONTINUER AVEC LES 5 JEUX <span>→</span></button>
+            <small>AFTER DARK RESTE VERROUILLÉ · AUCUN PAIEMENT ACTIF DANS CETTE VERSION</small>
           </div>
         </div>
       )}
