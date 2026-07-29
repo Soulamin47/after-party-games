@@ -48,7 +48,7 @@ const bottleChallenges = [
   "Montre la dernière photo de ta galerie — sans tricher.",
 ];
 
-const content: Record<Exclude<GameKey, "truth" | "bottle" | "dark">, string[]> = {
+const content: Record<Exclude<GameKey, "truth" | "bottle">, string[]> = {
   mime: [
     "Un pingouin qui découvre TikTok",
     "Quelqu’un qui marche sur des Lego",
@@ -70,6 +70,16 @@ const content: Record<Exclude<GameKey, "truth" | "bottle" | "dark">, string[]> =
     "Parle avec un accent inventé jusqu’à ton prochain tour.",
     "Cite 8 marques en 15 secondes. Le groupe compte !",
   ],
+  dark: [
+    "Quelle qualité te fait immédiatement craquer chez quelqu’un ?",
+    "Raconte ton rendez-vous le plus gênant — sans changer les détails.",
+    "Fais ton regard de séduction le plus exagéré pendant 10 secondes.",
+    "Qui dans le groupe aurait le plus de succès dans une émission de dating ?",
+    "Décris ton rendez-vous parfait en seulement trois mots.",
+    "Choisis une personne consentante et murmure-lui ton meilleur compliment.",
+    "Quelle chanson mettrait instantanément une ambiance romantique ?",
+    "Laisse le groupe inventer ta bio d’application de rencontre.",
+  ],
 };
 
 const defaultPlayers = ["Lina", "Yanis", "Chloé", "Sam"];
@@ -85,7 +95,6 @@ export default function Home() {
   const [bottleTarget, setBottleTarget] = useState<string | null>(null);
   const [bottleChallenge, setBottleChallenge] = useState("");
   const [showPremium, setShowPremium] = useState(false);
-  const [premiumFocus, setPremiumFocus] = useState(false);
   const [truthChoice, setTruthChoice] = useState<"truth" | "dare" | null>(null);
 
   useEffect(() => {
@@ -99,7 +108,7 @@ export default function Home() {
 
   const currentPlayer = players[round % players.length] || "Joueur";
   const prompt = useMemo(() => {
-    if (!activeGame || activeGame === "bottle" || activeGame === "dark") return "";
+    if (!activeGame || activeGame === "bottle") return "";
     if (activeGame === "truth") {
       if (!truthChoice) return "";
       const selected = truthChoice === "truth" ? truthPrompts : darePrompts;
@@ -116,11 +125,6 @@ export default function Home() {
   }
 
   function openGame(id: GameKey) {
-    if (id === "dark") {
-      setPremiumFocus(true);
-      setShowPremium(true);
-      return;
-    }
     if (id === "truth") setTruthChoice(null);
     if (id === "bottle") {
       setBottleTarget(null);
@@ -158,8 +162,8 @@ export default function Home() {
           <span>AFTER</span><i>!</i>
         </button>
         <div className="top-actions">
-          <button className="test-pill" onClick={() => { setPremiumFocus(false); setShowPremium(true); }}>
-            <span className="live-dot" /> MODE TEST · 5 JEUX DÉBLOQUÉS
+          <button className="test-pill" onClick={() => setShowPremium(true)}>
+            <span className="live-dot" /> MODE TEST · 6 JEUX DÉBLOQUÉS
           </button>
           <button className="avatar-stack" onClick={() => setStarted(false)} aria-label="Modifier les joueurs">
             {players.slice(0, 3).map((player, index) => (
@@ -174,7 +178,7 @@ export default function Home() {
         <p className="eyebrow"><span /> LA SOIRÉE COMMENCE ICI</p>
         <h1>POSE TON<br /><em>TÉLÉPHONE.</em><br />JOUE POUR DE VRAI.</h1>
         <div className="hero-side">
-          <p>5 jeux. Zéro préparation.<br />Des souvenirs que votre groupe<br />ne pourra pas effacer.</p>
+          <p>6 jeux. Zéro préparation.<br />Des souvenirs que votre groupe<br />ne pourra pas effacer.</p>
           <button className="primary-cta" onClick={() => setStarted(false)}>
             <span>PRÉPARER LA PARTIE</span><b>→</b>
           </button>
@@ -195,7 +199,7 @@ export default function Home() {
               <span className="game-icon">{game.icon}</span>
               <strong>{game.title.split("\n").map((line) => <span key={line}>{line}<br /></span>)}</strong>
               <small>{game.subtitle}</small>
-              <i>{game.premium ? "DÉBLOQUER" : "JOUER"} <b>{game.premium ? "🔒" : "→"}</b></i>
+              <i>{game.premium ? "TESTER" : "JOUER"} <b>→</b></i>
             </button>
           ))}
         </div>
@@ -206,8 +210,8 @@ export default function Home() {
           <span className="trial-kicker">TA PREMIÈRE SOIRÉE</span>
           <strong>EST POUR NOUS.</strong>
         </div>
-        <p>Teste les 5 jeux sans limite. Ensuite, débloque<br />AFTER! pour toutes vos prochaines soirées.</p>
-        <button onClick={() => { setPremiumFocus(false); setShowPremium(true); }}>VOIR L’ACCÈS PREMIUM <span>↗</span></button>
+        <p>Teste les 6 jeux sans limite. Ensuite, débloque<br />AFTER! pour toutes vos prochaines soirées.</p>
+        <button onClick={() => setShowPremium(true)}>VOIR L’ACCÈS PREMIUM <span>↗</span></button>
       </section>
 
       <footer>
@@ -312,20 +316,15 @@ export default function Home() {
         <div className="overlay premium-overlay">
           <div className="premium-card">
             <button className="close" onClick={() => setShowPremium(false)} aria-label="Fermer">×</button>
-            <span className="step">{premiumFocus ? "NOUVEAU · RÉSERVÉ AUX ADULTES" : "APRÈS LA SOIRÉE OFFERTE"}</span>
-            <h2>{premiumFocus ? <>PASSE EN<br /><em>MODE NUIT.</em></> : <>GARDE LE<br /><em>CHAOS.</em></>}</h2>
-            <p>
-              {premiumFocus
-                ? "After Dark mélange questions coquines, choix impossibles et défis pour les groupes qui veulent faire monter la température."
-                : "Les cinq jeux classiques restent ouverts pour les tests. After Dark est exclusivement réservé à l’accès payant."}
-            </p>
-            {premiumFocus && <div className="dark-lock"><span>♥</span><strong>AFTER DARK</strong><small>CONTENU PREMIUM · NON INCLUS DANS LE MODE TEST</small></div>}
+            <span className="step">APRÈS LA SOIRÉE OFFERTE</span>
+            <h2>GARDE LE<br /><em>CHAOS.</em></h2>
+            <p>Les six jeux, y compris After Dark, sont exceptionnellement ouverts pendant toute la phase de test.</p>
             <div className="price-options">
               <button><small>POUR CE SOIR</small><strong>PASS SOIRÉE</strong><b>3,99 €</b></button>
               <button className="popular"><i>LE PLUS RENTABLE</i><small>POUR TOUJOURS</small><strong>AFTER! À VIE</strong><b>14,99 €</b></button>
             </div>
-            <button className="launch" onClick={() => setShowPremium(false)}>CONTINUER AVEC LES 5 JEUX <span>→</span></button>
-            <small>AFTER DARK RESTE VERROUILLÉ · AUCUN PAIEMENT ACTIF DANS CETTE VERSION</small>
+            <button className="launch" onClick={() => setShowPremium(false)}>CONTINUER AVEC LES 6 JEUX <span>→</span></button>
+            <small>AFTER DARK EST OUVERT · AUCUN PAIEMENT ACTIF DANS CETTE VERSION</small>
           </div>
         </div>
       )}

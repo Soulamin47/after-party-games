@@ -14,7 +14,7 @@ Les cinq jeux classiques sont ouverts pour les tests :
 - Qui de nous ?
 - Défi éclair
 
-**After Dark** est présenté comme un jeu coquin Premium réservé aux adultes. Il reste volontairement verrouillé dans la version de test.
+**After Dark** est un jeu coquin Premium réservé aux adultes. Il est exceptionnellement ouvert dans la version de test.
 
 ## Développement
 
